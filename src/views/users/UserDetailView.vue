@@ -10,6 +10,7 @@
  *  2025-10-02		KCY				최초 생성
  *  2025-10-05      KCY             템플릿 작성
  *  2025-10-08      KCY             스크립트 작성
+ *  2025-10-13      KCY             불필요 코드 수정
 -->
 <template>
   <v-container>
@@ -83,13 +84,10 @@
 
 <script setup>
 /**
- * 요청/응답 규약
- * - 사용자 상세: GET /user-management/users/{userId} → Envelope<UserVO> { data: {...} }
- * - 사용자 권한: GET /cmmn-management/user-role/{userId} → Envelope<List<UserRoleVO>> { data: [...] }
- * - 공통 코드:   GET /cmmn-management/code/AA → Envelope<List<CommonCodeVO>> { data: [...] }
- *
- * 주의: 프로필 이미지는 불러오지 않음.
- * 삭제 API는 명세가 없어서 호출부만 TODO로 남김.
+ * REST API
+ * - 사용자 상세: GET /user-management/users/{userId}       → Envelope<UserVO> { data: {...} }
+ * - 사용자 권한: GET /cmmn-management/user-role/{userId}   → Envelope<List<UserRoleVO>> { data: [...] }
+ * - 공통 코드:   GET /cmmn-management/code/AA              → Envelope<List<CommonCodeVO>> { data: [...] }
  */
 import { inject, onMounted, ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -105,71 +103,84 @@ const loading = ref(false)
 const errorMsg = ref('')
 
 const roleNames = computed(() => {
-  if (!userRoles.value?.length || !cmmnCodeList.value?.length) return []
-  const codeMap = new Map(cmmnCodeList.value.map(c => [c.cmmnCd, c.cmmnNm]))
-  return userRoles.value
-    .map(r => codeMap.get(r.userRole))
-    .filter(Boolean)
+    if (!userRoles.value?.length || !cmmnCodeList.value?.length) return []
+    const codeMap = new Map(cmmnCodeList.value.map(c => [c.cmmnCd, c.cmmnNm]))
+    return userRoles.value
+        .map(r => codeMap.get(r.userRole))
+        .filter(Boolean)
 })
 
 function getUserId() {
-  return route.query.userId ?? route.params.userId ?? route.params.id
+    return route.query.userId ?? route.params.userId ?? route.params.id
 }
 
 async function load() {
-  errorMsg.value = ''
-  loading.value = true
-  try {
-    const userId = /*route.params.id*/ getUserId();
-    if (!userId) { errorMsg.value = 'userId가 없습니다.'; return }
-    console.debug("route.params.id: ", userId);
-    // 병렬 호출
-    const [userRes, rolesRes, codeRes] = await Promise.all([
-      axios.get(`/user-management/users/${userId}`),
-      axios.get(`/cmmn-management/user-role/${userId}`),
-      axios.get(`/cmmn-management/code/AA`)
-    ])
+    errorMsg.value = ''
+    loading.value = true
+    try {
+        const userId = /*route.params.id*/ getUserId();
+        if (!userId) { errorMsg.value = 'userId가 없습니다.'; return }
+        console.debug("route.params.id: ", userId);
+        // 병렬 호출
+        const [userRes, rolesRes, codeRes] = await Promise.all([
+        axios.get(`/user-management/users/${userId}`),
+        axios.get(`/cmmn-management/user-role/${userId}`),
+        axios.get(`/cmmn-management/code/AA`)
+        ])
 
-    // Envelope 형태 대응
-    user.value = userRes.data?.data ?? userRes.data ?? null
-    userRoles.value = rolesRes.data?.data ?? rolesRes.data ?? []
-    cmmnCodeList.value = codeRes.data?.data ?? codeRes.data ?? []
-  } catch (e) {
-    errorMsg.value = e?.response?.data?.message || '상세 정보를 불러오는 중 오류가 발생했습니다.'
-    // 개발 편의용 로깅
-    // eslint-disable-next-line no-console
-    console.error('DETAIL_LOAD_ERR', {
-      msg: e.message,
-      status: e.response?.status,
-      data: e.response?.data
-    })
-  } finally {
-    loading.value = false
-  }
+        // Envelope 형태 대응
+        user.value = userRes.data?.data ?? userRes.data ?? null
+        userRoles.value = rolesRes.data?.data ?? rolesRes.data ?? []
+        cmmnCodeList.value = codeRes.data?.data ?? codeRes.data ?? []
+    } catch (e) {
+        errorMsg.value = e?.response?.data?.message || '상세 정보를 불러오는 중 오류가 발생했습니다.'
+        // 디버깅
+        // eslint-disable-next-line no-console
+        console.error('DETAIL_LOAD_ERR', {
+        msg: e.message,
+        status: e.response?.status,
+        data: e.response?.data
+        })
+    } finally {
+        loading.value = false
+    }
 }
 
 // 라우트가 바뀌면 다시 로드 (뒤로가기/앞으로가기 포함)
 watch(
-  () => [route.query.userId, route.params.id, route.params.userId],
-  () => load()
+    () => [route.query.userId, route.params.id, route.params.userId],
+    () => load()
 )
 
 function goEdit() {
-  // 라우터에 편의상 user-edit 라우트가 있다고 가정
-  const userId = route.query.userId ?? route.params.userId ?? route.params.id;
-  router.push({ name: 'user-edit', query: { userId } });
+    const userId = route.query.userId ?? route.params.userId ?? route.params.id;
+    router.push({ name: 'user-edit', query: { userId } });
 }
 function goList() {
-  // 기존 JSP가 /cmmn/user/list 로 이동했으므로 라우트 네임 'users' 사용
-  router.push({ name: 'users' })
+    router.push({ name: 'users' })
 }
 async function remove() {
-  // TODO: 삭제 API 명세 확인 후 수정.
-  // 보통: await axios.delete(`/user-management/users/${route.params.id}`)
-  // await router.replace({ name: 'users' })
-  // 지금은 안전하게 콘솔만
-  // eslint-disable-next-line no-console
-  console.debug('DELETE requested for', route.params.id)
+    const userId = /*route.params.id*/ getUserId();
+
+    try {
+        console.debug("route.params.id: ", userId);
+        const removeRes = await axios.delete(`/user-management/users/${userId}`)
+        await router.replace({ name: 'users' })
+        goList();
+        // eslint-disable-next-line no-console
+        console.debug('DELETE requested for', userId)
+    } catch(e) {
+      errorMsg.value = e?.response?.data?.message || '상세 정보를 불러오는 중 오류가 발생했습니다.'
+        // 디버깅
+        // eslint-disable-next-line no-console
+        console.error('DETAIL_LOAD_ERR', {
+        msg: e.message,
+        status: e.response?.status,
+        data: e.response?.data
+        })
+    } finally {
+        loading.value = false
+    }
 }
 
 onMounted(load)
