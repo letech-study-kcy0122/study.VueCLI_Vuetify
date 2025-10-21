@@ -139,17 +139,36 @@ const headers = [
 ]
 
 // JSP 포맷 → "MM-dd HH:mm" 변환
+// function formatKstToMonthDayTime(str) {
+//   if (!str || typeof str !== 'string') return ''
+//   const parts = str.trim().split(/\s+/)
+//   if (parts.length < 6) return str
+//   const monthMap = { Jan:'01', Feb:'02', Mar:'03', Apr:'04', May:'05', Jun:'06', Jul:'07', Aug:'08', Sep:'09', Oct:'10', Nov:'11', Dec:'12' }
+//   const month = monthMap[parts[1]]
+//   const day = String(parts[2]).padStart(2, '0')
+//   const [hh, mm] = String(parts[3]).split(':')
+//   if (!month || !hh || !mm) return str
+//   return `${month}-${day} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+// }
+
 function formatKstToMonthDayTime(str) {
-  if (!str || typeof str !== 'string') return ''
-  const parts = str.trim().split(/\s+/)
-  if (parts.length < 6) return str
-  const monthMap = { Jan:'01', Feb:'02', Mar:'03', Apr:'04', May:'05', Jun:'06', Jul:'07', Aug:'08', Sep:'09', Oct:'10', Nov:'11', Dec:'12' }
-  const month = monthMap[parts[1]]
-  const day = String(parts[2]).padStart(2, '0')
-  const [hh, mm] = String(parts[3]).split(':')
-  if (!month || !hh || !mm) return str
-  return `${month}-${day} ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`
+  if (!str) return ''
+  const date = new Date(str)
+  if (isNaN(date)) return str
+
+  // KST로 변환
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000)
+
+  const yyyy = kst.getFullYear()
+  const mm = String(kst.getMonth() + 1).padStart(2, '0')
+  const dd = String(kst.getDate()).padStart(2, '0')
+  const hh = String(kst.getHours()).padStart(2, '0')
+  const mi = String(kst.getMinutes()).padStart(2, '0')
+  const ss = String(kst.getSeconds()).padStart(2, '0')
+
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`
 }
+
 
 // 라우터 전환: 검색어 쿼리스트링
 function syncQuery() {

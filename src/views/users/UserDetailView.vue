@@ -164,7 +164,7 @@ async function remove() {
 
     try {
         console.debug("route.params.id: ", userId);
-        const removeRes = await axios.delete(`/user-management/users/${userId}`)
+        /*const removeRes = */await axios.delete(`/user-management/users/${userId}`)
         await router.replace({ name: 'users' })
         goList();
         // eslint-disable-next-line no-console
